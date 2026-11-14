@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------- Titanium design tokens (RGB triplets so Tailwind can apply opacity) ---------- */
+:root,
+[data-theme="dark"] {
+  --base: 11 12 14; /* smoky black */
+  --panel: 24 26 30; /* charcoal */
+  --raised: 36 39 44;
+  --line: 255 255 255; /* used with low opacity */
+  --ink: 232 234 237;
+  --mute: 139 144 152; /* titanium gray */
+  --silver: 205 210 218;
+  --on-silver: 15 16 18;
+  --ok: 110 196 150;
+  --warn: 224 177 99;
+  --bad: 228 118 118;
+  --info: 125 168 224;
+  --line-alpha: 0.09;
+  --glass-alpha: 0.62;
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --base: 240 241 243;
+  --panel: 255 255 255;
+  --raised: 233 235 238;
+  --line: 20 22 26;
+  --ink: 24 26 30;
+  --mute: 102 108 118;
+  --silver: 52 56 64;
+  --on-silver: 250 250 251;
+  --ok: 34 140 90;
+  --warn: 176 110 20;
+  --bad: 200 60 60;
+  --info: 50 100 180;
+  --line-alpha: 0.12;
+  --glass-alpha: 0.8;
+  color-scheme: light;
+}
+
+@layer base {
+  * {
+    @apply border-line/[var(--line-alpha)];
+  }
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    @apply bg-base font-sans text-ink antialiased;
+    min-height: 100vh;
+    /* faint smoky gradients */
+    background-image:
+      radial-gradient(
+        60rem 40rem at 15% -10%,
+        rgb(var(--silver) / 0.07),
+        transparent 60%
+      ),
+      radial-gradient(
+        50rem 36rem at 100% 0%,
+        rgb(var(--info) / 0.05),
+        transparent 60%
+      );
+    background-attachment: fixed;
+  }
+  ::selection {
+    background: rgb(var(--silver) / 0.3);
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--mute) / 0.35);
+    border-radius: 99px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  :focus-visible {
+    outline: 2px solid rgb(var(--silver) / 0.7);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Dark glass panel */
+  .glass {
+    background: rgb(var(--panel) / var(--glass-alpha));
+    backdrop-filter: blur(14px) saturate(120%);
+    -webkit-backdrop-filter: blur(14px) saturate(120%);
+    border: 1px solid rgb(var(--line) / var(--line-alpha));
+    @apply rounded-2xl shadow-glass;
+  }
+  .field {
+    @apply w-full rounded-xl border bg-raised/60 px-3.5 py-2.5 text-sm text-ink placeholder:text-mute/70 transition;
+    border-color: rgb(var(--line) / var(--line-alpha));
+  }
+  .field:hover {
+    border-color: rgb(var(--line) / 0.22);
+  }
+  .field:focus {
+    outline: none;
+    border-color: rgb(var(--silver) / 0.7);
+    box-shadow: 0 0 0 3px rgb(var(--silver) / 0.12);
+  }
+  .field[aria-invalid="true"] {
+    border-color: rgb(var(--bad) / 0.7);
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-silver text-on-silver shadow-soft hover:brightness-110;
+  }
+  .btn-ghost {
+    @apply btn border text-ink hover:bg-raised;
+    border-color: rgb(var(--line) / var(--line-alpha));
+  }
+  .btn-danger {
+    @apply btn bg-bad/90 text-white hover:bg-bad;
+  }
+  .icon-btn {
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-lg text-mute transition hover:bg-raised hover:text-ink;
+  }
+  .label {
+    @apply mb-1.5 block text-xs font-medium uppercase tracking-wide text-mute;
+  }
+  .th {
+    @apply px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-mute;
+  }
+  .td {
+    @apply px-4 py-3 text-sm;
+  }
+}
+
+.brand-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: contain;
+}
