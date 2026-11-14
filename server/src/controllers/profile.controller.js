@@ -71,3 +71,19 @@ export const uploadAvatarHandler = asyncHandler(async (req, res) => {
   res.json({ success: true, user: publicUser(user) });
 });
 
+export const removeAvatar = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  const oldAvatar = user.avatar;
+
+  user.avatar = "";
+  await user.save({ validateBeforeSave: false });
+
+  await removeAvatarFile(oldAvatar);
+
+  res.json({ success: true, user: publicUser(user) });
+});
