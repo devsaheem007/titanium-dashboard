@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { protect, requirePermission } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { authLimiter, forgotLimiter } from '../middleware/rateLimit.js';
-import { uploadAvatar } from '../middleware/upload.js';
+import { uploadAvatar, validateAvatarSignature } from '../middleware/upload.js';
 import * as S from '../validators/schemas.js';
 import * as auth from '../controllers/auth.controller.js';
 import * as profile from '../controllers/profile.controller.js';
@@ -32,7 +32,7 @@ router.get('/auth/me', auth.me);
 router.post('/auth/change-password', authLimiter, validate(S.changePasswordSchema), auth.changePassword);
 
 router.patch('/profile', validate(S.profileSchema), profile.updateProfile);
-router.post('/profile/avatar', uploadAvatar, profile.uploadAvatarHandler);
+router.post('/profile/avatar', uploadAvatar, validateAvatarSignature, profile.uploadAvatarHandler);
 router.delete('/profile/avatar', profile.removeAvatar);
 
 // users (admin + managers can read; only users:write can change)

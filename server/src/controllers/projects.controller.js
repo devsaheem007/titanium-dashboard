@@ -60,7 +60,7 @@ export const createProject = asyncHandler(async (req, res) => {
 });
 
 export const updateProject = asyncHandler(async (req, res) => {
-  const project = await Project.findById(req.params.id);
+  const project = await findAccessible(req.user, req.params.id);
   if (!project) throw new AppError('Project not found', 404);
   const before = project.assignedTo.map(String);
 
@@ -83,7 +83,7 @@ export const updateProject = asyncHandler(async (req, res) => {
 });
 
 export const deleteProject = asyncHandler(async (req, res) => {
-  const project = await Project.findById(req.params.id);
+  const project = await findAccessible(req.user, req.params.id);
   if (!project) throw new AppError('Project not found', 404);
   await Task.deleteMany({ project: project._id });
   await project.deleteOne();

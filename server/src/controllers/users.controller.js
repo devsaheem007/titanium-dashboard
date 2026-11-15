@@ -5,7 +5,7 @@ import { Notification } from '../models/Notification.js';
 import { Activity } from '../models/Activity.js';
 import { PasswordResetToken } from '../models/PasswordResetToken.js';
 import { AppError, asyncHandler, escapeRegex, paginate, pageMeta } from '../utils/helpers.js';
-import { logActivity, notify } from '../services/common.js';
+import { logActivity, notify, canSeeAll } from '../services/common.js';
 import { removeAvatarFile } from '../middleware/upload.js';
 
 async function ensureAnotherActiveAdmin(excludeId) {
@@ -38,6 +38,13 @@ export const directory = asyncHandler(async (_req, res) => {
 });
 
 export const getUser = asyncHandler(async (req, res) => {
+  if (
+    !canSeeAll(req.user) &&
+    String(req.params.id) !== String(req.user._id)
+  ) {
+    throw new AppError('You cannot view this user profile', 403);
+  }
+
   const user = await User.findById(req.params.id);
   if (!user) throw new AppError('User not found', 404);
   const [projects, openTasks, doneTasks, activities] = await Promise.all([
@@ -107,8 +114,8 @@ export const deleteUser = asyncHandler(async (req, res) => {
     Notification.deleteMany({ user: user._id }),
     PasswordResetToken.deleteMany({ user: user._id }),
   ]);
-  removeAvatarFile(user.avatar);
   await user.deleteOne();
+  await removeAvatarFile(user.avatar);
   await logActivity(req.user, 'delete', 'user', user._id, `${req.user.name} deleted user ${user.name}`);
   res.json({ success: true, message: 'User deleted' });
 });

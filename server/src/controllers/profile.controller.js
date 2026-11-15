@@ -11,10 +11,11 @@ const publicUser = (user) => ({
 
 export const updateProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id).select("+password");
+  if (!user) throw new AppError("User not found", 404);
+
   const { name, email, currentPassword, theme, notificationPrefs } = req.body;
 
   if (email && email !== user.email) {
-    // Changing the email needs the current password, so a stolen session cannot take over the account.
     if (!currentPassword || !(await user.comparePassword(currentPassword))) {
       throw new AppError(
         "Enter your current password to change your email",
@@ -24,14 +25,19 @@ export const updateProfile = asyncHandler(async (req, res) => {
     }
     user.email = email;
   }
+
   if (name) user.name = name;
   if (theme) user.theme = theme;
+
   if (notificationPrefs) {
-    for (const [k, v] of Object.entries(notificationPrefs))
+    for (const [k, v] of Object.entries(notificationPrefs)) {
       user.notificationPrefs[k] = v;
+    }
   }
+
   await user.save();
-  if (name || email)
+
+  if (name || email) {
     await logActivity(
       user,
       "update",
@@ -39,14 +45,20 @@ export const updateProfile = asyncHandler(async (req, res) => {
       user._id,
       `${user.name} updated their profile`,
     );
+  }
+
   res.json({ success: true, user: publicUser(user) });
 });
 
 export const uploadAvatarHandler = asyncHandler(async (req, res) => {
-  if (!req.file) throw new AppError("Choose an image to upload", 400);
+  if (!req.file) {
+    throw new AppError("Choose an image to upload", 400);
+  }
 
   const user = await User.findById(req.user._id);
-  const old = user.avatar;
+  if (!user) throw new AppError("User not found", 404);
+
+  const oldAvatar = user.avatar;
 
   const result = await new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
@@ -63,10 +75,20 @@ export const uploadAvatarHandler = asyncHandler(async (req, res) => {
     stream.end(req.file.buffer);
   });
 
-  user.avatar = result.secure_url;
-  await user.save({ validateBeforeSave: false });
+  if (!result?.secure_url) {
+    throw new AppError("Avatar upload failed", 502);
+  }
 
-  removeAvatarFile(old);
+  user.avatar = result.secure_url;
+
+  try {
+    await user.save({ validateBeforeSave: false });
+  } catch (error) {
+    await removeAvatarFile(result.secure_url);
+    throw error;
+  }
+
+  await removeAvatarFile(oldAvatar);
 
   res.json({ success: true, user: publicUser(user) });
 });

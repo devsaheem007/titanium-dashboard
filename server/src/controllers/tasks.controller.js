@@ -2,7 +2,7 @@ import { Task } from '../models/Task.js';
 import { Project } from '../models/Project.js';
 import { User } from '../models/User.js';
 import { AppError, asyncHandler, escapeRegex, paginate, pageMeta } from '../utils/helpers.js';
-import { logActivity, notify, recalcProjectProgress, taskScope } from '../services/common.js';
+import { logActivity, notify, recalcProjectProgress, taskScope, projectScope, canSeeAll } from '../services/common.js';
 
 const populate = [
   { path: 'assignee', select: 'name email avatar' },
@@ -37,7 +37,24 @@ export const listTasks = asyncHandler(async (req, res) => {
 
 export const createTask = asyncHandler(async (req, res) => {
   await checkRefs(req.body);
+
   const data = { ...req.body, createdBy: req.user._id };
+  const canAssignOthers = canSeeAll(req.user);
+
+  if (data.project && !(await Project.exists({
+    _id: data.project,
+    ...projectScope(req.user),
+  }))) {
+    throw new AppError('You do not have access to this project', 403);
+  }
+
+  if (!canAssignOthers) {
+    if (data.assignee && String(data.assignee) !== String(req.user._id)) {
+      throw new AppError('You can only assign tasks to yourself', 403);
+    }
+    data.assignee = req.user._id;
+  }
+
   if (data.status === 'done') data.completedAt = new Date();
   const task = await Task.create(data);
   await recalcProjectProgress(task.project);
@@ -62,6 +79,22 @@ export const updateTask = asyncHandler(async (req, res) => {
   }
   await checkRefs(changes);
 
+  if (!canSeeAll(req.user)) {
+    if (changes.project && !(await Project.exists({
+      _id: changes.project,
+      ...projectScope(req.user),
+    }))) {
+      throw new AppError('You do not have access to this project', 403);
+    }
+
+    if (
+      changes.assignee !== undefined &&
+      String(changes.assignee) !== String(req.user._id)
+    ) {
+      throw new AppError('You can only assign tasks to yourself', 403);
+    }
+  }
+
   const previousAssignee = String(task.assignee || '');
   const previousProject = task.project;
   const previousStatus = task.status;
@@ -83,7 +116,10 @@ export const updateTask = asyncHandler(async (req, res) => {
 });
 
 export const deleteTask = asyncHandler(async (req, res) => {
-  const task = await Task.findById(req.params.id);
+  const task = await Task.findOne({
+    _id: req.params.id,
+    ...taskScope(req.user),
+  });
   if (!task) throw new AppError('Task not found', 404);
   await task.deleteOne();
   await recalcProjectProgress(task.project);

@@ -16,7 +16,7 @@ export default async function handler(req, res) {
     }
 
     if (!dbPromise) {
-      dbPromise = connectDB();
+      dbPromise = connectDB().catch((error) => { dbPromise = null; throw error; });
     }
 
     await dbPromise;
